@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeSchool AI Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-shield-virus"></i>
+                <h1>SafeSchool AI</h1>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-item active" data-view="security">
+                    <i class="fa-solid fa-camera-security"></i> Satpam (Live)
+                </button>
+                <button class="nav-item" data-view="counselor">
+                    <i class="fa-solid fa-user-shield"></i> Guru BK (Review)
+                </button>
+                <button class="nav-item" data-view="principal">
+                    <i class="fa-solid fa-chart-line"></i> Kepala Sekolah
+                </button>
+            </nav>
+            <div class="privacy-status">
+                <i class="fa-solid fa-eye-slash"></i> Face-Blurring: <strong>ON</strong>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- HEADER -->
+            <header class="topbar">
+                <h2 id="view-title">Live Monitoring</h2>
+                <div class="topbar-actions">
+                    <div class="time-display" id="clock">00:00:00</div>
+                    <button class="btn-export"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
+                    <div class="profile">
+                        <img src="https://ui-avatars.com/api/?name=Admin&background=0D8ABC&color=fff" alt="User">
+                    </div>
+                </div>
+            </header>
+
+            <div class="view-container">
+                <!-- 1. SECURITY VIEW (SATPAM) -->
+                <div id="view-security" class="view active">
+                    <div class="security-layout">
+                        <div class="video-grid">
+                            <!-- Video 1 -->
+                            <div class="video-card">
+                                <div class="cam-title">Kamera 1 - Lorong Utama</div>
+                                <div class="cam-feed" id="cam-1">
+                                    <div class="ai-overlay hidden">
+                                        <div class="bounding-box"></div>
+                                        <div class="ai-prob">Prob: <span class="score">0.0</span></div>
+                                    </div>
+                                    <video class="real-video" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;">
+                                        <source src="videos/cam1.mp4" type="video/mp4">
+                                        Browser Anda tidak mendukung tag video.
+                                    </video>
+                                </div>
+                            </div>
+                            <!-- Video 2 -->
+                            <div class="video-card">
+                                <div class="cam-title">Kamera 2 - Kantin</div>
+                                <div class="cam-feed" id="cam-2">
+                                    <div class="ai-overlay hidden">
+                                        <div class="bounding-box"></div>
+                                        <div class="ai-prob">Prob: <span class="score">0.0</span></div>
+                                    </div>
+                                    <video class="real-video" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;">
+                                        <source src="videos/cam2.mp4" type="video/mp4">
+                                        Browser Anda tidak mendukung tag video.
+                                    </video>
+                                </div>
+                            </div>
+                            <!-- Video 3 -->
+                            <div class="video-card">
+                                <div class="cam-title">Kamera 3 - Belakang Sekolah</div>
+                                <div class="cam-feed" id="cam-3">
+                                    <div class="ai-overlay hidden">
+                                        <div class="bounding-box"></div>
+                                        <div class="ai-prob">Prob: <span class="score">0.0</span></div>
+                                    </div>
+                                    <video class="real-video" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;">
+                                        <source src="videos/cam3.mp4" type="video/mp4">
+                                        Browser Anda tidak mendukung tag video.
+                                    </video>
+                                </div>
+                            </div>
+                            <!-- Video 4 -->
+                            <div class="video-card">
+                                <div class="cam-title">Kamera 4 - Lapangan Olahraga</div>
+                                <div class="cam-feed" id="cam-4">
+                                    <div class="ai-overlay hidden">
+                                        <div class="bounding-box"></div>
+                                        <div class="ai-prob">Prob: <span class="score">0.0</span></div>
+                                    </div>
+                                    <video class="real-video" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;">
+                                        <source src="videos/cam4.mp4" type="video/mp4">
+                                        Browser Anda tidak mendukung tag video.
+                                    </video>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Alerts Bar -->
+                        <div class="alert-sidebar">
+                            <div class="alert-header">
+                                <h3><i class="fa-solid fa-bell"></i> Live Alerts</h3>
+                                <span class="badge" id="alert-count">0</span>
+                            </div>
+                            <div class="alert-list" id="live-alerts">
+                                <!-- Alerts will be injected here via JS -->
+                                <div class="empty-state">Semua aman. Tidak ada anomali.</div>
+                            </div>
+                            
+                            <!-- Emergency Popup (Hidden by default) -->
+                            <div class="emergency-popup hidden" id="emergency-popup">
+                                <button class="btn-close-popup" id="btn-close-popup" title="Tutup Popup"><i class="fa-solid fa-xmark"></i></button>
+                                <div class="emergency-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                                <h4>Kondisi Kritis Terdeteksi!</h4>
+                                <p>Lokasi: <span id="em-location">Kamera 2</span></p>
+                                <button class="btn-quick-action" id="btn-quick-action">KONFIRMASI TINDAKAN</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. COUNSELOR VIEW (GURU BK) -->
+                <div id="view-counselor" class="view hidden">
+                    <div class="counselor-layout">
+                        <div class="queue-section">
+                            <h3>Daily Review Queue (T_low - T_high)</h3>
+                            <p class="subtitle">Anomali dengan probabilitas sedang yang memerlukan tinjauan manusia.</p>
+                            
+                            <div class="incident-table-wrapper">
+                                <table class="incident-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Waktu</th>
+                                            <th>Lokasi</th>
+                                            <th>Probabilitas</th>
+                                            <th>Status</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="review-queue-body">
+                                        <!-- Mock data -->
+                                        <tr>
+                                            <td>08:15:22</td>
+                                            <td>Lorong Utama</td>
+                                            <td><span class="badge yellow">0.65</span></td>
+                                            <td>Menunggu Review</td>
+                                            <td><button class="btn-play"><i class="fa-solid fa-play"></i> Putar Klip</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td>10:30:10</td>
+                                            <td>Kantin</td>
+                                            <td><span class="badge yellow">0.72</span></td>
+                                            <td>Menunggu Review</td>
+                                            <td><button class="btn-play"><i class="fa-solid fa-play"></i> Putar Klip</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="playback-section">
+                            <h3>Video Playback</h3>
+                            <div class="playback-player">
+                                <div class="placeholder-player">
+                                    <i class="fa-solid fa-film"></i>
+                                    <p>Pilih klip dari antrean untuk memutar</p>
+                                </div>
+                            </div>
+                            <div class="playback-actions">
+                                <button class="btn-outline">Tandai False Alarm</button>
+                                <button class="btn-danger">Eskalasi Insiden</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. PRINCIPAL VIEW (KEPALA SEKOLAH) -->
+                <div id="view-principal" class="view hidden">
+                    <div class="stats-cards">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fa-solid fa-globe"></i></div>
+                            <div class="stat-info">
+                                <h4>SDG 4 Compliance</h4>
+                                <div class="stat-value text-green">+15%</div>
+                                <span class="stat-desc">Lingkungan Belajar Aman (vs Bulan Lalu)</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon warning"><i class="fa-solid fa-hand"></i></div>
+                            <div class="stat-info">
+                                <h4>Total Insiden (Bulan ini)</h4>
+                                <div class="stat-value">12</div>
+                                <span class="stat-desc">-3 dari bulan lalu</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon info"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                            <div class="stat-info">
+                                <h4>Rata-rata Respon Satpam</h4>
+                                <div class="stat-value">22 Detik</div>
+                                <span class="stat-desc">Target: < 30 Detik</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="charts-layout">
+                        <div class="chart-container">
+                            <h3>Temporal Trend (Jam Rawan)</h3>
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Spatial Heatmap (Titik Rawan)</h3>
+                            <div class="heatmap-mock">
+                                <div class="heatmap-map">
+                                    <div class="hotspot" style="top: 30%; left: 40%; background: rgba(255,0,0,0.7); box-shadow: 0 0 20px 10px rgba(255,0,0,0.5);"></div> <!-- Kantin -->
+                                    <div class="hotspot" style="top: 70%; left: 80%; background: rgba(255,165,0,0.6); box-shadow: 0 0 15px 5px rgba(255,165,0,0.4);"></div> <!-- Belakang -->
+                                </div>
+                                <div class="heatmap-legend">
+                                    <span><span class="dot red"></span> Kantin (Tinggi)</span>
+                                    <span><span class="dot orange"></span> Belakang (Sedang)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Audio element for critical alerts -->
+    <audio id="alert-sound" src="https://www.soundjay.com/buttons/sounds/beep-01a.mp3" preload="auto"></audio>
+    
+    <script src="app.js"></script>
+</body>
+</html>
