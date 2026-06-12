@@ -2,3 +2,6 @@ backend/models/
 videos/
 __pycache__/
 *.pkl
+*.pem
+test.*
+notebooks/

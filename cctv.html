@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeSchool CCTV Transmitter</title>
+    <style>
+        body { margin: 0; background-color: #0f172a; color: white; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        video { width: 100vw; height: 100vh; object-fit: cover; position: absolute; z-index: 1; }
+        .overlay { position: absolute; z-index: 2; top: 20px; left: 20px; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 8px; border: 1px solid #334155; }
+        h1 { margin: 0; font-size: 1.2rem; color: #10B981; }
+        p { margin: 5px 0 0 0; font-size: 0.9rem; color: #94A3B8; }
+        .recording-dot { display: inline-block; width: 10px; height: 10px; background: #EF4444; border-radius: 50%; margin-right: 8px; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+    <video id="cctv-video" autoplay playsinline muted></video>
+    <canvas id="cctv-canvas" width="224" height="224" style="display:none;"></canvas>
+    
+    <div class="overlay">
+        <h1><span class="recording-dot"></span>Memancarkan Kamera 2</h1>
+        <p id="status">Status: Menghubungkan...</p>
+    </div>
+
+    <script>
+        const video = document.getElementById('cctv-video');
+        const canvas = document.getElementById('cctv-canvas');
+        const statusEl = document.getElementById('status');
+        let ws;
+
+        navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: "environment",
+                width: { ideal: 640 }, 
+                height: { ideal: 480 } 
+            } 
+        })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                statusEl.textContent = "Error: Kamera diblokir/tidak ada!";
+                statusEl.style.color = "#EF4444";
+            });
+
+        function connect() {
+            // Determine host from URL
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            const wsUrl = `${protocol}//${window.location.host}/ws/cctv/cam-2`;
+            
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                statusEl.textContent = "Status: Transmisi AKTIF";
+                statusEl.style.color = "#10B981";
+            };
+
+            ws.onclose = () => {
+                statusEl.textContent = "Status: Terputus. Menghubungkan ulang...";
+                statusEl.style.color = "#F59E0B";
+                setTimeout(connect, 3000);
+            };
+            
+            ws.onerror = () => {
+                ws.close();
+            }
+        }
+
+        connect();
+
+        setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN && video.readyState === video.HAVE_ENOUGH_DATA) {
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const base64Img = canvas.toDataURL('image/jpeg', 0.6);
+                
+                ws.send(JSON.stringify({
+                    type: "frame",
+                    image: base64Img
+                }));
+            }
+        }, 60); // ~16 fps
+    </script>
+</body>
+</html>

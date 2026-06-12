@@ -274,7 +274,7 @@ body {
 
 .ai-prob {
     position: absolute;
-    bottom: 12px;
+    top: 12px;
     right: 12px;
     background: var(--emergency-red);
     color: white;
@@ -376,8 +376,8 @@ body {
 
 .btn-close-popup {
     position: absolute;
-    top: 12px;
-    right: 16px;
+    top: 8px;
+    right: 8px;
     background: transparent;
     border: none;
     color: white;
@@ -385,6 +385,8 @@ body {
     cursor: pointer;
     opacity: 0.8;
     transition: opacity 0.2s;
+    padding: 12px;
+    z-index: 100;
 }
 
 .btn-close-popup:hover {

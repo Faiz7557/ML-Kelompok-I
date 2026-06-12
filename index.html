@@ -28,9 +28,6 @@
                     <i class="fa-solid fa-chart-line"></i> Kepala Sekolah
                 </button>
             </nav>
-            <div class="privacy-status">
-                <i class="fa-solid fa-eye-slash"></i> Face-Blurring: <strong>ON</strong>
-            </div>
         </aside>
 
         <!-- Main Content -->
@@ -60,10 +57,8 @@
                                         <div class="bounding-box"></div>
                                         <div class="ai-prob">Prob: <span class="score">0.0</span></div>
                                     </div>
-                                    <video class="real-video" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;">
-                                        <source src="videos/cam1.mp4" type="video/mp4">
-                                        Browser Anda tidak mendukung tag video.
-                                    </video>
+                                    <video id="webcam-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover;"></video>
+                                    <canvas id="webcam-canvas" width="224" height="224" style="display: none;"></canvas>
                                 </div>
                             </div>
                             <!-- Video 2 -->
@@ -74,10 +69,7 @@
                                         <div class="bounding-box"></div>
                                         <div class="ai-prob">Prob: <span class="score">0.0</span></div>
                                     </div>
-                                    <video class="real-video" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;">
-                                        <source src="videos/cam2.mp4" type="video/mp4">
-                                        Browser Anda tidak mendukung tag video.
-                                    </video>
+                                    <img id="cam-2-stream" src="" style="width: 100%; height: 100%; object-fit: cover; background: #222; color: #94A3B8; text-align: center; display: flex; align-items: center; font-size: 0.9rem;" alt="Menunggu koneksi dari Laptop 2 (CCTV)..." />
                                 </div>
                             </div>
                             <!-- Video 3 -->
@@ -158,14 +150,14 @@
                                             <td>Lorong Utama</td>
                                             <td><span class="badge yellow">0.65</span></td>
                                             <td>Menunggu Review</td>
-                                            <td><button class="btn-play"><i class="fa-solid fa-play"></i> Putar Klip</button></td>
+                                            <td><button class="btn-play" data-location="Lorong Utama"><i class="fa-solid fa-play"></i> Putar Klip</button></td>
                                         </tr>
                                         <tr>
                                             <td>10:30:10</td>
                                             <td>Kantin</td>
                                             <td><span class="badge yellow">0.72</span></td>
                                             <td>Menunggu Review</td>
-                                            <td><button class="btn-play"><i class="fa-solid fa-play"></i> Putar Klip</button></td>
+                                            <td><button class="btn-play" data-location="Kantin"><i class="fa-solid fa-play"></i> Putar Klip</button></td>
                                         </tr>
                                     </tbody>
                                 </table>

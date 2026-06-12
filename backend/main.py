@@ -1,11 +1,17 @@
 import asyncio
 import json
 import random
-import time
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
 import os
-import sys
+import cv2
+import numpy as np
+import torch
+import torch.nn as nn
+import base64
+from torchvision.models import mobilenet_v2, MobileNet_V2_Weights
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
@@ -16,90 +22,271 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-model_loaded = False
+# Configuration
+FRAMES_PER_WINDOW = 16
+TARGET_H, TARGET_W = 224, 224
+
+# Model Definition
+class MobileNetV2LSTM(nn.Module):
+    def __init__(self,
+                 backbone_features: int = 1280,
+                 lstm_hidden: int       = 512,
+                 lstm_layers: int       = 1,
+                 dropout: float         = 0.5):
+        super().__init__()
+        base = mobilenet_v2(weights=MobileNet_V2_Weights.IMAGENET1K_V1)
+        self.features = base.features
+        self.pool = nn.AdaptiveAvgPool2d(1)
+
+        self.lstm = nn.LSTM(
+            input_size  = backbone_features,
+            hidden_size = lstm_hidden,
+            num_layers  = lstm_layers,
+            batch_first = True,
+            dropout     = 0.0,
+        )
+        self.head = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(lstm_hidden, 1),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B, T, C, H, W = x.shape
+        x = x.view(B * T, C, H, W)
+        x = self.features(x)
+        x = self.pool(x).flatten(1)
+        x = x.view(B, T, -1)
+        _, (h_n, _) = self.lstm(x)
+        x = h_n[-1]
+        logits = self.head(x)
+        return logits
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Menggunakan device: {device}")
+
+# Inisialisasi Model
 model = None
+model_path = os.path.join("models", "model.pt")
 
-# Attempt to load the user's best_tuned_model
 try:
-    import torch
-    model_path = os.path.join(os.path.dirname(__file__), 'models', 'best_tuned_model')
-    print(f"Mencoba memuat model PyTorch dari: {model_path}")
-    
-    # Normally PyTorch models require the model architecture class to be defined.
-    # Since we don't have the original class, torch.load might throw an error.
-    # We will try to load the weights or the whole model if it's TorchScript or self-contained.
     if os.path.exists(model_path):
-        try:
-            # Try TorchScript load first, often works for directories
-            model = torch.jit.load(model_path)
-            model_loaded = True
-            print("Model PyTorch TorchScript berhasil dimuat!")
-        except Exception:
-            # Try legacy load
-            model = torch.load(os.path.join(model_path, 'data.pkl'), map_location='cpu')
-            model_loaded = True
-            print("Model PyTorch Anda berhasil dimuat (Terbaca ke dalam memori)!")
+        model = MobileNetV2LSTM().to(device)
+        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+        if 'model_state_dict' in checkpoint:
+            state_dict = checkpoint['model_state_dict']
+        elif 'state_dict' in checkpoint:
+            state_dict = checkpoint['state_dict']
+        else:
+            state_dict = checkpoint
+            
+        model.load_state_dict(state_dict)
+        model.eval()
+        print("Model ML nyata berhasil dimuat!")
     else:
-        print("[WARNING] Path model tidak ditemukan, pastikan folder 'best_tuned_model' benar ada.")
-except ImportError:
-    print("[WARNING] PyTorch tidak terinstall. Jalankan 'pip install torch'. Menggunakan simulasi AI...")
+        print(f"File {model_path} tidak ditemukan, akan fallback ke simulasi!")
 except Exception as e:
-    print(f"[WARNING] Peringatan saat memuat model: {e}")
-    print("[WARNING] Karena ini prototipe dan kode arsitektur model asli tidak disertakan, proses AI akan beralih ke Mode Simulasi.")
+    print(f"Gagal memuat model: {e}")
+    model = None
 
-async def process_video_stream(websocket: WebSocket, cam_id: str, cam_name: str, base_prob: float):
-    while True:
-        try:
+# Helper Video Processing
+def preprocess_frame(frame):
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame = cv2.resize(frame, (TARGET_W, TARGET_H), interpolation=cv2.INTER_LINEAR)
+    frame = frame.astype(np.float32) / 255.0
+    frame = np.transpose(frame, (2, 0, 1))
+    mean = np.array([0.485, 0.456, 0.406]).reshape(3, 1, 1)
+    std = np.array([0.229, 0.224, 0.225]).reshape(3, 1, 1)
+    frame = (frame - mean) / std
+    return frame
+
+
+# --- WEBSOCKET STATE ---
+dashboard_sockets = set()
+
+# Background task for Cam-3 and Cam-4 (recorded videos)
+async def process_video_stream(cam_id: str, cam_name: str, video_file: str):
+    video_path = os.path.join("..", "videos", video_file)
+    
+    if not model or not os.path.exists(video_path):
+        while True:
+            spike = random.uniform(0.1, 0.9) if random.random() > 0.95 else random.uniform(0, 0.3)
+            prob = min(0.1 + spike, 1.0)
+            payload = {"cam_id": cam_id, "cam_name": cam_name, "prob": prob, "box": {"w": 0, "h": 0, "x": 0, "y": 0}}
+            for ws in list(dashboard_sockets):
+                try:
+                    await ws.send_text(json.dumps(payload))
+                except:
+                    pass
             await asyncio.sleep(1.0)
             
-            # --- AI INFERENCE (SIMULATION OR REAL) ---
-            if model_loaded and model is not None:
-                # Disini seharusnya proses OpenCV mengambil frame dan memasukkan ke `model(frame)`
-                # Karena ini backend dummy tanpa kamera asli, kita tetap membuat simulasi probabilitas.
-                # Namun dalam production, baris ini diganti dengan inferensi asli Anda.
-                spike = random.uniform(0, 0.8) if random.random() > 0.95 else random.uniform(0, 0.3)
-                prob = min(base_prob + spike, 1.0)
-            else:
-                # Fallback Simulation
-                spike = random.uniform(0, 0.8) if random.random() > 0.95 else random.uniform(0, 0.3)
-                prob = min(base_prob + spike, 1.0)
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        return
+
+    frames_buffer = []
+    raw_frames_buffer = []
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            continue
             
-            w = 20 + random.uniform(0, 30)
-            h = 40 + random.uniform(0, 40)
-            x = 10 + random.uniform(0, 100 - w - 10)
-            y = 10 + random.uniform(0, 100 - h - 10)
+        processed_frame = preprocess_frame(frame)
+        frames_buffer.append(processed_frame)
+        
+        _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 60])
+        b64 = "data:image/jpeg;base64," + base64.b64encode(buffer).decode('utf-8')
+        raw_frames_buffer.append(b64)
+        
+        if len(frames_buffer) == FRAMES_PER_WINDOW:
+            input_tensor = torch.tensor(np.array(frames_buffer), dtype=torch.float32).unsqueeze(0).to(device)
+            with torch.no_grad():
+                logits = model(input_tensor)
+                prob = torch.sigmoid(logits).item()
             
-            data = {
-                "cam_id": cam_id,
-                "cam_name": cam_name,
-                "prob": round(prob, 2),
-                "box": {"x": x, "y": y, "w": w, "h": h}
-            }
-            
-            await websocket.send_text(json.dumps(data))
-            
-        except WebSocketDisconnect:
-            break
-        except Exception as e:
-            print(f"Error processing {cam_id}: {e}")
-            break
+            clip_data = []
+            if prob >= 0.5:
+                clip_data = list(raw_frames_buffer)
+                
+            payload = {"cam_id": cam_id, "cam_name": cam_name, "prob": prob, "box": {"w": 0, "h": 0, "x": 0, "y": 0}, "clip": clip_data}
+            for ws in list(dashboard_sockets):
+                try:
+                    await ws.send_text(json.dumps(payload))
+                except:
+                    pass
+            frames_buffer = frames_buffer[8:]
+            raw_frames_buffer = raw_frames_buffer[8:]
+        await asyncio.sleep(0.05)
+
+
+@app.on_event("startup")
+async def startup_event():
+    # Start simulating/playing offline videos for cam-3 and cam-4 in the background
+    asyncio.create_task(process_video_stream("cam-3", "Belakang Sekolah", "cam3.mp4"))
+    asyncio.create_task(process_video_stream("cam-4", "Lapangan Olahraga", "cam4.mp4"))
 
 @app.websocket("/ws/detect")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_dashboard(websocket: WebSocket):
+    """Endpoint for the main dashboard (Laptop 1)"""
     await websocket.accept()
-    print("Frontend Dashboard terhubung ke Backend AI via WebSocket!")
-    
-    tasks = [
-        asyncio.create_task(process_video_stream(websocket, "cam-1", "Lorong Utama", 0.1)),
-        asyncio.create_task(process_video_stream(websocket, "cam-2", "Kantin", 0.3)),
-        asyncio.create_task(process_video_stream(websocket, "cam-3", "Belakang Sekolah", 0.2)),
-        asyncio.create_task(process_video_stream(websocket, "cam-4", "Lapangan Olahraga", 0.1))
-    ]
-    
+    dashboard_sockets.add(websocket)
+    frames_buffer = []
+    raw_frames_buffer = []
     try:
         while True:
-            await websocket.receive_text()
+            data = await websocket.receive_text()
+            payload = json.loads(data)
+            
+            if payload.get("type") == "frame" and payload.get("cam_id") == "cam-1":
+                img_b64 = payload["image"].split(',')[1] if ',' in payload["image"] else payload["image"]
+                img_data = base64.b64decode(img_b64)
+                np_arr = np.frombuffer(img_data, np.uint8)
+                frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                
+                if frame is not None and model is not None:
+                    processed_frame = preprocess_frame(frame)
+                    frames_buffer.append(processed_frame)
+                    raw_frames_buffer.append(payload["image"])
+                    if len(frames_buffer) == FRAMES_PER_WINDOW:
+                        input_tensor = torch.tensor(np.array(frames_buffer), dtype=torch.float32).unsqueeze(0).to(device)
+                        with torch.no_grad():
+                            logits = model(input_tensor)
+                            prob = torch.sigmoid(logits).item()
+                            
+                        clip_data = []
+                        if prob >= 0.5:
+                            clip_data = list(raw_frames_buffer)
+                            
+                        response = {
+                            "cam_id": "cam-1",
+                            "cam_name": "Lorong Utama (Webcam)",
+                            "prob": prob,
+                            "box": {"w": 0, "h": 0, "x": 0, "y": 0},
+                            "clip": clip_data
+                        }
+                        await websocket.send_text(json.dumps(response))
+                        frames_buffer = frames_buffer[8:]
+                        raw_frames_buffer = raw_frames_buffer[8:]
     except WebSocketDisconnect:
-        print("Frontend terputus.")
-        for t in tasks:
-            t.cancel()
+        dashboard_sockets.remove(websocket)
+
+
+@app.websocket("/ws/cctv/{cam_id}")
+async def websocket_cctv(websocket: WebSocket, cam_id: str):
+    """Endpoint for remote CCTV clients (Laptop 2)"""
+    await websocket.accept()
+    frames_buffer = []
+    raw_frames_buffer = []
+    try:
+        while True:
+            data = await websocket.receive_text()
+            payload = json.loads(data)
+            
+            if payload.get("type") == "frame":
+                # 1. Broadcast the raw video frame to the Dashboard so they can watch the live CCTV
+                broadcast_msg = {
+                    "type": "video_frame",
+                    "cam_id": cam_id,
+                    "image": payload["image"]
+                }
+                for ws in list(dashboard_sockets):
+                    try:
+                        await ws.send_text(json.dumps(broadcast_msg))
+                    except:
+                        pass
+                
+                # 2. Process AI Inference
+                img_b64 = payload["image"].split(',')[1] if ',' in payload["image"] else payload["image"]
+                img_data = base64.b64decode(img_b64)
+                np_arr = np.frombuffer(img_data, np.uint8)
+                frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                
+                if frame is not None and model is not None:
+                    processed_frame = preprocess_frame(frame)
+                    frames_buffer.append(processed_frame)
+                    raw_frames_buffer.append(payload["image"])
+                    if len(frames_buffer) == FRAMES_PER_WINDOW:
+                        input_tensor = torch.tensor(np.array(frames_buffer), dtype=torch.float32).unsqueeze(0).to(device)
+                        with torch.no_grad():
+                            logits = model(input_tensor)
+                            prob = torch.sigmoid(logits).item()
+                            
+                        clip_data = []
+                        if prob >= 0.5:
+                            clip_data = list(raw_frames_buffer)
+                            
+                        response = {
+                            "cam_id": cam_id,
+                            "cam_name": "Kamera 2 (CCTV Eksternal)",
+                            "prob": prob,
+                            "box": {"w": 0, "h": 0, "x": 0, "y": 0},
+                            "clip": clip_data
+                        }
+                        for ws in list(dashboard_sockets):
+                            try:
+                                await ws.send_text(json.dumps(response))
+                            except:
+                                pass
+                        frames_buffer = frames_buffer[8:]
+                        raw_frames_buffer = raw_frames_buffer[8:]
+    except WebSocketDisconnect:
+        pass
+
+
+# Serving Static Frontend HTML/JS/CSS
+app.mount("/static", StaticFiles(directory=".."), name="static")
+
+@app.get("/")
+async def serve_index():
+    return FileResponse("../index.html")
+
+@app.get("/cctv")
+async def serve_cctv():
+    return FileResponse("../cctv.html")
+
+@app.get("/{file_path:path}")
+async def serve_file(file_path: str):
+    full_path = os.path.join("..", file_path)
+    if os.path.exists(full_path) and os.path.isfile(full_path):
+        return FileResponse(full_path)
+    return {"error": "File not found"}

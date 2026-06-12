@@ -82,7 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function connectWebSocket() {
         console.log("Mencoba menyambungkan ke Backend Python...");
-        ws = new WebSocket("ws://localhost:8000/ws/detect");
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        ws = new WebSocket(`${protocol}//${window.location.host}/ws/detect`);
 
         ws.onopen = () => {
             console.log("Terhubung ke Backend AI!");
@@ -92,11 +93,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearInterval(simulationInterval);
                 simulationInterval = null;
             }
+            
+            // Force reload MJPEG stream to bypass browser cache
+            const cam1Img = document.getElementById('cam1-stream');
+            if (cam1Img) {
+                cam1Img.src = "http://127.0.0.1:8000/video_feed/cam1?t=" + new Date().getTime();
+            }
         };
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            processAIDetection(data.cam_id, data.cam_name, data.prob, data.box);
+            if (data.type === "video_frame") {
+                const streamImg = document.getElementById(data.cam_id + '-stream');
+                if (streamImg) {
+                    streamImg.src = data.image;
+                }
+            } else {
+                processAIDetection(data.cam_id, data.cam_name, data.prob, data.box, data.clip);
+            }
         };
 
         ws.onclose = () => {
@@ -115,45 +129,41 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    function processAIDetection(cam_id, cam_name, prob, box) {
+    // 2. AI Detection & Overlay Logic
+    function processAIDetection(cam_id, cam_name, prob, box, clipData) {
         const feedEl = document.getElementById(cam_id);
         if (!feedEl) return;
         const overlay = feedEl.querySelector('.ai-overlay');
-        const bbox = feedEl.querySelector('.bounding-box');
         const scoreEl = feedEl.querySelector('.score');
+        const aiProb = feedEl.querySelector('.ai-prob');
         
         scoreEl.textContent = prob.toFixed(2);
-        bbox.style.width = `${box.w}%`;
-        bbox.style.height = `${box.h}%`;
-        bbox.style.left = `${box.x}%`;
-        bbox.style.top = `${box.y}%`;
-
+        
         if (prob >= T_HIGH) {
             // Kritis (Red)
             overlay.classList.remove('hidden');
-            bbox.classList.remove('review', 'normal');
+            aiProb.style.background = 'var(--emergency-red)';
             
             if (emergencyPopup.classList.contains('hidden')) {
                 emLocation.textContent = cam_name;
                 emergencyPopup.classList.remove('hidden');
                 addAlert(`Probabilitas tinggi (${prob.toFixed(2)}) terdeteksi!`, 'critical', cam_name);
                 alertSound.play().catch(e => console.log('Autoplay blocked', e));
+                if (clipData && clipData.length > 0) addToReviewQueue(cam_name, prob, clipData);
             }
         } else if (prob >= T_LOW) {
             // Review (Yellow)
             overlay.classList.remove('hidden');
-            bbox.classList.remove('normal');
-            bbox.classList.add('review');
+            aiProb.style.background = 'var(--review-yellow)';
             
-            if (Math.random() > 0.8) {
+            if (clipData && clipData.length > 0) {
                 addAlert(`Aktivitas mencurigakan (${prob.toFixed(2)})`, 'review', cam_name);
-                addToReviewQueue(cam_name, prob);
+                addToReviewQueue(cam_name, prob, clipData);
             }
         } else {
             // Normal (Green)
             overlay.classList.remove('hidden');
-            bbox.classList.remove('review');
-            bbox.classList.add('normal');
+            aiProb.style.background = 'var(--normal-green)';
         }
     }
 
@@ -182,6 +192,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 5.5. WebRTC WEBCAM STREAMING
+    const webcamVideo = document.getElementById('webcam-video');
+    const webcamCanvas = document.getElementById('webcam-canvas');
+    let webcamStreamActive = false;
+
+    if (webcamVideo && webcamCanvas) {
+        navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+            .then(stream => {
+                webcamVideo.srcObject = stream;
+                webcamStreamActive = true;
+                console.log("WebRTC Camera Activated!");
+            })
+            .catch(err => {
+                console.error("Gagal membuka kamera laptop:", err);
+            });
+    }
+
+    function sendWebcamFrame() {
+        if (!isConnected || !webcamStreamActive || !ws) return;
+        // Hanya kirim jika WebSocket siap (readyState === 1)
+        if (ws.readyState !== 1) return;
+        
+        const ctx = webcamCanvas.getContext('2d');
+        ctx.drawImage(webcamVideo, 0, 0, webcamCanvas.width, webcamCanvas.height);
+        
+        // Ekstrak sebagai Base64 JPEG dengan kualitas 70% (agar ringan di websocket)
+        const dataUrl = webcamCanvas.toDataURL('image/jpeg', 0.7);
+        
+        ws.send(JSON.stringify({
+            type: "frame",
+            cam_id: "cam-1",
+            image: dataUrl
+        }));
+    }
+    
+    // Kirim 15-20 frames per second ke backend
+    setInterval(sendWebcamFrame, 60);
+
     // Start connection
     connectWebSocket();
     // Start local immediately, will be cancelled when connected
@@ -206,20 +254,56 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 7. Update Review Queue Table
-    function addToReviewQueue(location, prob) {
+    const incidentClips = {};
+    let clipCounter = 0;
+
+    function addToReviewQueue(location, prob, clipData) {
         const tbody = document.getElementById('review-queue-body');
         const tr = document.createElement('tr');
         const time = new Date().toLocaleTimeString('id-ID');
+        const clipId = `clip_${clipCounter++}`;
+        incidentClips[clipId] = clipData;
         
         tr.innerHTML = `
             <td>${time}</td>
             <td>${location}</td>
             <td><span class="badge yellow">${prob.toFixed(2)}</span></td>
             <td>Menunggu Review</td>
-            <td><button class="btn-play" onclick="alert('Memutar klip CCTV dari ${location}')"><i class="fa-solid fa-play"></i> Putar Klip</button></td>
+            <td><button class="btn-play" data-clip-id="${clipId}"><i class="fa-solid fa-play"></i> Putar Klip</button></td>
         `;
         tbody.prepend(tr);
     }
+
+    // Video Playback Logic
+    const reviewQueueBody = document.getElementById('review-queue-body');
+    const playbackPlayer = document.querySelector('.playback-player');
+    const playbackSection = document.querySelector('.playback-section');
+    let playbackInterval = null;
+
+    reviewQueueBody.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-play');
+        if (btn) {
+            const clipId = btn.getAttribute('data-clip-id');
+            const clipData = incidentClips[clipId];
+            
+            if (clipData && clipData.length > 0) {
+                playbackPlayer.innerHTML = `<img id="clip-player-img" src="${clipData[0]}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px; background: #000;">`;
+                playbackSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                if (playbackInterval) clearInterval(playbackInterval);
+                let frameIdx = 0;
+                playbackInterval = setInterval(() => {
+                    const img = document.getElementById('clip-player-img');
+                    if (img) {
+                        frameIdx = (frameIdx + 1) % clipData.length;
+                        img.src = clipData[frameIdx];
+                    } else {
+                        clearInterval(playbackInterval);
+                    }
+                }, 60);
+            }
+        }
+    });
 
     // 8. Init Chart.js for Principal
     function initChart() {
