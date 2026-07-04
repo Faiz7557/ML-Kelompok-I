@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeSchool AI – Join as Camera Node</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-deep: #060810;
+            --bg-card: rgba(15, 23, 42, 0.85);
+            --border: rgba(255,255,255,0.07);
+            --accent: #3b82f6;
+            --accent-glow: rgba(59,130,246,0.35);
+            --green: #10b981;
+            --green-glow: rgba(16,185,129,0.35);
+            --orange: #f59e0b;
+            --red: #ef4444;
+            --text-primary: #f1f5f9;
+            --text-muted: #64748b;
+            --text-sub: #94a3b8;
+        }
+
+        body {
+            min-height: 100dvh;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 60% 50% at 20% 20%, rgba(59,130,246,0.07) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 80% 80%, rgba(16,185,129,0.05) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 8px 0 4px;
+        }
+        .header .logo {
+            width: 52px; height: 52px;
+            background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem;
+            margin: 0 auto 14px;
+            box-shadow: 0 0 30px rgba(59,130,246,0.4);
+        }
+        .header h1 { font-size: 1.4rem; font-weight: 700; }
+        .header p { font-size: 0.85rem; color: var(--text-sub); margin-top: 4px; }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        /* Camera Preview */
+        .preview-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #070a12;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        #preview-video {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .preview-badge {
+            position: absolute;
+            top: 10px; left: 10px;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: flex; align-items: center; gap: 6px;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .rec-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+        .rec-dot.active {
+            background: var(--red);
+            box-shadow: 0 0 8px var(--red);
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0.3; } }
+
+        .preview-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .preview-placeholder i { font-size: 2rem; opacity: 0.4; }
+
+        /* Form */
+        .form-group { margin-top: 16px; }
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-sub);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input[type="text"]:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        input[type="text"]::placeholder { color: var(--text-muted); }
+
+        /* Buttons */
+        .btn-start {
+            width: 100%;
+            margin-top: 16px;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(59,130,246,0.35);
+        }
+        .btn-start:hover:not(:disabled) {
+            opacity: 0.9; transform: translateY(-1px);
+            box-shadow: 0 6px 28px rgba(59,130,246,0.5);
+        }
+        .btn-start:active:not(:disabled) { transform: translateY(0); }
+        .btn-start:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .btn-stop {
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px;
+            border: 1px solid rgba(239,68,68,0.4);
+            border-radius: 14px;
+            background: rgba(239,68,68,0.1);
+            color: var(--red);
+            font-size: 0.9rem;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            display: none; align-items: center; justify-content: center; gap: 8px;
+            transition: background 0.2s;
+        }
+        .btn-stop:hover { background: rgba(239,68,68,0.2); }
+        .btn-stop.visible { display: flex; }
+
+        /* Status */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 0.82rem;
+            margin-top: 12px;
+        }
+        .status-indicator {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            flex-shrink: 0;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .status-indicator.connecting { background: var(--orange); box-shadow: 0 0 8px var(--orange); animation: blink 0.8s infinite; }
+        .status-indicator.connected  { background: var(--green);  box-shadow: 0 0 8px var(--green); animation: none; }
+        .status-indicator.error      { background: var(--red);    box-shadow: 0 0 8px var(--red); animation: none; }
+
+        #status-text { color: var(--text-sub); flex: 1; }
+
+        /* Stats row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 4px;
+        }
+        .stat-chip {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.78rem;
+        }
+        .stat-chip .label { color: var(--text-muted); }
+        .stat-chip .value { font-weight: 600; color: var(--text-primary); margin-top: 2px; }
+
+        /* Camera ID display */
+        .cam-id-display {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 2px;
+        }
+        .cam-id-display code {
+            color: var(--accent);
+            font-family: monospace;
+            background: rgba(59,130,246,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Dashboard link */
+        .dashboard-link {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .dashboard-link a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .dashboard-link a:hover { text-decoration: underline; }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+            .container {
+                gap: 12px;
+            }
+            .header {
+                padding: 4px 0;
+            }
+            .header .logo {
+                width: 44px;
+                height: 44px;
+                font-size: 1.25rem;
+                margin-bottom: 8px;
+            }
+            .header h1 {
+                font-size: 1.2rem;
+            }
+            .header p {
+                font-size: 0.78rem;
+            }
+            .card {
+                padding: 16px;
+                border-radius: 16px;
+            }
+            .preview-wrapper {
+                border-radius: 10px;
+            }
+            input[type="text"] {
+                padding: 10px 14px;
+                font-size: 0.88rem;
+            }
+            .btn-start, .btn-stop {
+                padding: 11px;
+                font-size: 0.88rem;
+                border-radius: 10px;
+            }
+            .status-bar {
+                padding: 10px 14px;
+                font-size: 0.78rem;
+                margin-top: 8px;
+            }
+            .stat-chip {
+                padding: 8px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo"><i class="fa-solid fa-shield-halved"></i></div>
+            <h1>SafeSchool AI</h1>
+            <p>Bergabung sebagai node kamera live monitoring</p>
+        </div>
+
+        <!-- Camera Preview Card -->
+        <div class="card">
+            <div class="preview-wrapper">
+                <div class="preview-placeholder" id="preview-placeholder">
+                    <i class="fa-solid fa-camera-slash"></i>
+                    <span>Kamera belum aktif</span>
+                </div>
+                <video id="preview-video" autoplay playsinline muted style="display:none;"></video>
+                <div class="preview-badge">
+                    <span class="rec-dot" id="rec-dot"></span>
+                    <span id="preview-label">Preview</span>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <div class="form-group">
+                <label for="cam-name-input"><i class="fa-solid fa-location-dot"></i> &nbsp;Nama Lokasi Kamera</label>
+                <input type="text" id="cam-name-input" placeholder="cth: Ruang Guru, Gerbang Depan, Kantin..." maxlength="40">
+            </div>
+
+            <button class="btn-start" id="btn-start">
+                <i class="fa-solid fa-circle-play"></i> Mulai Transmisi
+            </button>
+            <button class="btn-stop" id="btn-stop">
+                <i class="fa-solid fa-circle-stop"></i> Hentikan Transmisi
+            </button>
+
+            <!-- Status -->
+            <div class="status-bar">
+                <span class="status-indicator" id="status-indicator"></span>
+                <span id="status-text">Siap. Masukkan nama lokasi dan tekan Mulai.</span>
+            </div>
+
+            <div class="stats-row" id="stats-row" style="display:none;">
+                <div class="stat-chip">
+                    <div class="label">Frame Terkirim</div>
+                    <div class="value" id="stat-frames">0</div>
+                </div>
+                <div class="stat-chip">
+                    <div class="label">Kecepatan</div>
+                    <div class="value" id="stat-fps">— fps</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Node ID info -->
+        <div class="cam-id-display" id="cam-id-display" style="display:none;">
+            Node ID: <code id="cam-id-label"></code>
+        </div>
+
+        <!-- Dashboard Link -->
+        <div class="dashboard-link">
+            <a href="/" target="_blank"><i class="fa-solid fa-display"></i> Buka Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        // --- Config ---
+        // 5 fps is optimal for the MobileNetV2+LSTM pipeline:
+        // - Server extracts features every 2nd frame (INFERENCE_EVERY_N=2)
+        // - 16-frame window is filled in ~6.4s at 5fps
+        // - Leaves headroom for multiple simultaneous nodes
+        const FRAME_INTERVAL_MS = 200; // 5 fps
+        const MAX_BUFFER_BYTES  = 65536; // 64 KB — skip frame if WS is congested
+
+        // --- State ---
+        let ws = null;
+        let stream = null;
+        let frameInterval = null;
+        let isTransmitting = false;
+        let framesSent = 0;
+        let lastFpsCheck = Date.now();
+        let fpsCounter = 0;
+
+        // Generate a unique cam_id for this device
+        const camId = 'cam-node-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        // Elements
+        const previewVideo    = document.getElementById('preview-video');
+        const previewPlaceholder = document.getElementById('preview-placeholder');
+        const recDot          = document.getElementById('rec-dot');
+        const previewLabel    = document.getElementById('preview-label');
+        const camNameInput    = document.getElementById('cam-name-input');
+        const btnStart        = document.getElementById('btn-start');
+        const btnStop         = document.getElementById('btn-stop');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText      = document.getElementById('status-text');
+        const statsRow        = document.getElementById('stats-row');
+        const statFrames      = document.getElementById('stat-frames');
+        const statFps         = document.getElementById('stat-fps');
+        const camIdDisplay    = document.getElementById('cam-id-display');
+        const camIdLabel      = document.getElementById('cam-id-label');
+
+        // Canvas for frame capture (offscreen)
+        // 320x240: enough detail for 224x224 resize on server, lighter than full res
+        const canvas = document.createElement('canvas');
+        canvas.width  = 320;
+        canvas.height = 240;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        // --- Pre-activate camera preview on load ---
+        async function initCameraPreview() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+                });
+                previewVideo.srcObject = stream;
+                previewVideo.style.display = 'block';
+                previewPlaceholder.style.display = 'none';
+                setStatus('idle', 'Kamera aktif. Masukkan nama lokasi dan tekan Mulai.');
+            } catch (err) {
+                setStatus('error', 'Kamera diblokir atau tidak tersedia: ' + err.message);
+                btnStart.disabled = true;
+            }
+        }
+
+        function setStatus(state, message) {
+            statusIndicator.className = 'status-indicator';
+            if (state === 'connecting') statusIndicator.classList.add('connecting');
+            if (state === 'connected')  statusIndicator.classList.add('connected');
+            if (state === 'error')      statusIndicator.classList.add('error');
+            statusText.textContent = message;
+        }
+
+        // --- WebSocket ---
+        function connectWS(camName) {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const url = `${protocol}//${window.location.host}/ws/node/${camId}`;
+            
+            setStatus('connecting', 'Menghubungkan ke server...');
+            ws = new WebSocket(url);
+
+            ws.onopen = () => {
+                // First message: register with cam_name
+                ws.send(JSON.stringify({ type: 'register', cam_name: camName }));
+                setStatus('connected', `Transmisi AKTIF ke dashboard sebagai "${camName}"`);
+                recDot.classList.add('active');
+                previewLabel.textContent = 'LIVE';
+                statsRow.style.display = 'grid';
+                camIdDisplay.style.display = 'block';
+                camIdLabel.textContent = camId;
+                startSendingFrames();
+            };
+
+            ws.onclose = () => {
+                if (!isTransmitting) return;
+                setStatus('connecting', 'Koneksi terputus. Menghubungkan ulang...');
+                setTimeout(() => connectWS(camName), 3000);
+            };
+
+            ws.onerror = () => ws.close();
+        }
+
+        function startSendingFrames() {
+            if (frameInterval) clearInterval(frameInterval);
+
+            frameInterval = setInterval(() => {
+                if (!ws || ws.readyState !== WebSocket.OPEN) return;
+                if (!stream || previewVideo.readyState < 2) return;
+
+                // Adaptive backpressure: skip frame if send buffer is congested
+                if (ws.bufferedAmount > MAX_BUFFER_BYTES) return;
+
+                ctx.drawImage(previewVideo, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.60);
+
+                ws.send(JSON.stringify({ type: 'frame', image: dataUrl }));
+
+                framesSent++;
+                fpsCounter++;
+                statFrames.textContent = framesSent.toLocaleString();
+
+                const now = performance.now();
+                if (now - lastFpsCheck >= 1000) {
+                    statFps.textContent = fpsCounter + ' fps';
+                    fpsCounter = 0;
+                    lastFpsCheck = now;
+                }
+            }, FRAME_INTERVAL_MS);
+        }
+
+        function stopTransmission() {
+            isTransmitting = false;
+            if (frameInterval) { clearInterval(frameInterval); frameInterval = null; }
+            if (ws) { ws.onclose = null; ws.close(); ws = null; }
+            recDot.classList.remove('active');
+            previewLabel.textContent = 'Preview';
+            statsRow.style.display = 'none';
+            camIdDisplay.style.display = 'none';
+            btnStart.style.display = 'flex';
+            btnStop.classList.remove('visible');
+            camNameInput.disabled = false;
+            setStatus('idle', 'Transmisi dihentikan. Kamera masih aktif.');
+        }
+
+        // --- Button Handlers ---
+        btnStart.addEventListener('click', () => {
+            const camName = camNameInput.value.trim() || 'Kamera Tanpa Nama';
+            isTransmitting = true;
+            btnStart.style.display = 'none';
+            btnStop.classList.add('visible');
+            camNameInput.disabled = true;
+            framesSent = 0;
+            statFrames.textContent = '0';
+            connectWS(camName);
+        });
+
+        btnStop.addEventListener('click', stopTransmission);
+
+        // Prevent page close without warning during transmission
+        window.addEventListener('beforeunload', (e) => {
+            if (isTransmitting) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Init
+        initCameraPreview();
+    </script>
+</body>
+</html>

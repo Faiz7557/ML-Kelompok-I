@@ -7,40 +7,54 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=1.1">
 </head>
 <body>
     <div class="dashboard-container">
         <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="brand">
-                <i class="fa-solid fa-shield-virus"></i>
-                <h1>SafeSchool AI</h1>
+            <div class="brand" data-tooltip="SafeSchool AI">
+                <i class="fa-solid fa-shield-halved"></i>
             </div>
             <nav class="nav-menu">
-                <button class="nav-item active" data-view="security">
-                    <i class="fa-solid fa-camera-security"></i> Satpam (Live)
+                <button class="nav-item active" data-view="security" data-tooltip="Satpam (Live)">
+                    <i class="fa-solid fa-video"></i>
                 </button>
-                <button class="nav-item" data-view="counselor">
-                    <i class="fa-solid fa-user-shield"></i> Guru BK (Review)
+                <button class="nav-item" data-view="counselor" data-tooltip="Guru BK (Review)">
+                    <i class="fa-solid fa-user-shield"></i>
                 </button>
-                <button class="nav-item" data-view="principal">
-                    <i class="fa-solid fa-chart-line"></i> Kepala Sekolah
+                <button class="nav-item" data-view="principal" data-tooltip="Kepala Sekolah">
+                    <i class="fa-solid fa-chart-pie"></i>
                 </button>
             </nav>
+            <div class="sidebar-bottom">
+                <button class="nav-item-bottom" id="theme-toggle" data-tooltip="Ubah Tema"><i class="fa-regular fa-sun"></i></button>
+                <div class="profile-avatar-container" data-tooltip="Profil Saya">
+                    <img src="https://ui-avatars.com/api/?name=Admin&background=1D4ED8&color=fff" alt="User">
+                </div>
+            </div>
         </aside>
 
         <!-- Main Content -->
         <main class="main-content">
             <!-- HEADER -->
             <header class="topbar">
-                <h2 id="view-title">Live Monitoring</h2>
-                <div class="topbar-actions">
-                    <div class="time-display" id="clock">00:00:00</div>
-                    <button class="btn-export"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
-                    <div class="profile">
-                        <img src="https://ui-avatars.com/api/?name=Admin&background=0D8ABC&color=fff" alt="User">
+                <div class="topbar-brand">
+                    <span class="app-logo"><i class="fa-solid fa-shield-halved"></i></span>
+                    <div class="app-info">
+                        <h1 class="app-title">SafeSchool AI</h1>
+                        <span class="view-subtitle" id="view-title">Live Monitoring</span>
                     </div>
+                </div>
+                <div class="topbar-actions">
+                    <a href="/join" target="_blank" class="btn-join-node" title="Hubungkan kamera device lain">
+                        <i class="fa-solid fa-circle-nodes"></i> Tambah Node
+                    </a>
+                    <div class="time-display-container">
+                        <i class="fa-regular fa-clock"></i>
+                        <span class="time-display" id="clock">00:00:00</span>
+                    </div>
+                    <button class="btn-export"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
                 </div>
             </header>
 
@@ -51,8 +65,18 @@
                         <div class="video-grid">
                             <!-- Video 1 -->
                             <div class="video-card">
-                                <div class="cam-title">Kamera 1 - Lorong Utama</div>
                                 <div class="cam-feed" id="cam-1">
+                                    <!-- Floating Camera Badge -->
+                                    <div class="cam-header-tag">
+                                        <i class="fa-solid fa-video" style="color: #60a5fa; text-shadow: 0 0 6px rgba(96, 165, 250, 0.4); font-size: 0.72rem;"></i>
+                                        <span class="cam-name">Kamera 1</span>
+                                        <span class="tag-divider">|</span>
+                                        <span class="live-status-pill">
+                                            <span class="live-dot"></span>
+                                            <span class="cam-meta">LIVE</span>
+                                        </span>
+                                        <button class="btn-rename-cam" data-cam-id="cam-1" title="Ganti nama kamera"><i class="fa-solid fa-pen"></i></button>
+                                    </div>
                                     <div class="ai-overlay hidden">
                                         <div class="bounding-box"></div>
                                         <div class="ai-prob">Prob: <span class="score">0.0</span></div>
@@ -63,19 +87,44 @@
                             </div>
                             <!-- Video 2 -->
                             <div class="video-card">
-                                <div class="cam-title">Kamera 2 - Kantin</div>
                                 <div class="cam-feed" id="cam-2">
+                                    <!-- Floating Camera Badge -->
+                                    <div class="cam-header-tag">
+                                        <i class="fa-solid fa-video" style="color: #60a5fa; text-shadow: 0 0 6px rgba(96, 165, 250, 0.4); font-size: 0.72rem;"></i>
+                                        <span class="cam-name">Kamera 2</span>
+                                        <span class="tag-divider">|</span>
+                                        <span class="live-status-pill">
+                                            <span class="live-dot"></span>
+                                            <span class="cam-meta">LIVE</span>
+                                        </span>
+                                        <button class="btn-rename-cam" data-cam-id="cam-2" title="Ganti nama kamera"><i class="fa-solid fa-pen"></i></button>
+                                    </div>
                                     <div class="ai-overlay hidden">
                                         <div class="bounding-box"></div>
                                         <div class="ai-prob">Prob: <span class="score">0.0</span></div>
                                     </div>
-                                    <img id="cam-2-stream" src="" style="width: 100%; height: 100%; object-fit: cover; background: #222; color: #94A3B8; text-align: center; display: flex; align-items: center; font-size: 0.9rem;" alt="Menunggu koneksi dari Laptop 2 (CCTV)..." />
+                                    <div class="feed-connection-state">
+                                        <div class="spinner-ring"></div>
+                                        <i class="fa-solid fa-wifi-slash" style="font-size: 1.4rem; color: var(--color-orange); animation: pulseSignal 1s infinite alternate;"></i>
+                                        <span>Menunggu Feed Kamera...</span>
+                                    </div>
+                                    <img id="cam-2-stream" src="" style="width: 100%; height: 100%; object-fit: cover; background: #0c0f16; display: none;" />
                                 </div>
                             </div>
                             <!-- Video 3 -->
                             <div class="video-card">
-                                <div class="cam-title">Kamera 3 - Belakang Sekolah</div>
                                 <div class="cam-feed" id="cam-3">
+                                    <!-- Floating Camera Badge -->
+                                    <div class="cam-header-tag">
+                                        <i class="fa-solid fa-video" style="color: #60a5fa; text-shadow: 0 0 6px rgba(96, 165, 250, 0.4); font-size: 0.72rem;"></i>
+                                        <span class="cam-name">Kamera 3</span>
+                                        <span class="tag-divider">|</span>
+                                        <span class="live-status-pill">
+                                            <span class="live-dot"></span>
+                                            <span class="cam-meta">LIVE</span>
+                                        </span>
+                                        <button class="btn-rename-cam" data-cam-id="cam-3" title="Ganti nama kamera"><i class="fa-solid fa-pen"></i></button>
+                                    </div>
                                     <div class="ai-overlay hidden">
                                         <div class="bounding-box"></div>
                                         <div class="ai-prob">Prob: <span class="score">0.0</span></div>
@@ -88,8 +137,18 @@
                             </div>
                             <!-- Video 4 -->
                             <div class="video-card">
-                                <div class="cam-title">Kamera 4 - Lapangan Olahraga</div>
                                 <div class="cam-feed" id="cam-4">
+                                    <!-- Floating Camera Badge -->
+                                    <div class="cam-header-tag">
+                                        <i class="fa-solid fa-video" style="color: #60a5fa; text-shadow: 0 0 6px rgba(96, 165, 250, 0.4); font-size: 0.72rem;"></i>
+                                        <span class="cam-name">Kamera 4</span>
+                                        <span class="tag-divider">|</span>
+                                        <span class="live-status-pill">
+                                            <span class="live-dot"></span>
+                                            <span class="cam-meta">LIVE</span>
+                                        </span>
+                                        <button class="btn-rename-cam" data-cam-id="cam-4" title="Ganti nama kamera"><i class="fa-solid fa-pen"></i></button>
+                                    </div>
                                     <div class="ai-overlay hidden">
                                         <div class="bounding-box"></div>
                                         <div class="ai-prob">Prob: <span class="score">0.0</span></div>
@@ -113,6 +172,32 @@
                                 <div class="empty-state">Semua aman. Tidak ada anomali.</div>
                             </div>
                             
+                            <!-- AI Diagnostics Widget -->
+                            <div class="system-diagnostics-card">
+                                <div class="diagnostic-header">
+                                    <h4><i class="fa-solid fa-microchip"></i> AI Diagnostics</h4>
+                                    <span class="pulse-dot green"></span>
+                                </div>
+                                <div class="diagnostic-grid">
+                                    <div class="diag-item">
+                                        <span class="diag-label">Core Engine</span>
+                                        <span class="diag-value text-green">ONLINE</span>
+                                    </div>
+                                    <div class="diag-item">
+                                        <span class="diag-label">FPS Pemantau</span>
+                                        <span class="diag-value">30 FPS</span>
+                                    </div>
+                                    <div class="diag-item">
+                                        <span class="diag-label">Rata Latensi</span>
+                                        <span class="diag-value" id="diag-latency">42 ms</span>
+                                    </div>
+                                    <div class="diag-item">
+                                        <span class="diag-label">Beban CPU AI</span>
+                                        <span class="diag-value" id="diag-cpu">24%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <!-- Emergency Popup (Hidden by default) -->
                             <div class="emergency-popup hidden" id="emergency-popup">
                                 <button class="btn-close-popup" id="btn-close-popup" title="Tutup Popup"><i class="fa-solid fa-xmark"></i></button>
@@ -127,6 +212,30 @@
 
                 <!-- 2. COUNSELOR VIEW (GURU BK) -->
                 <div id="view-counselor" class="view hidden">
+                    <div class="counselor-stats">
+                        <div class="counselor-stat-card">
+                            <div class="c-stat-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                            <div class="c-stat-info">
+                                <span class="c-stat-label">Menunggu Tinjauan</span>
+                                <span class="c-stat-value" id="c-pending-count">2 Kasus</span>
+                            </div>
+                        </div>
+                        <div class="counselor-stat-card">
+                            <div class="c-stat-icon warning"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="c-stat-info">
+                                <span class="c-stat-label">Kasus Dieskalasi</span>
+                                <span class="c-stat-value">5 Terkonfirmasi</span>
+                            </div>
+                        </div>
+                        <div class="counselor-stat-card">
+                            <div class="c-stat-icon success"><i class="fa-solid fa-square-check"></i></div>
+                            <div class="c-stat-info">
+                                <span class="c-stat-label">Akurasi Deteksi AI</span>
+                                <span class="c-stat-value">94.2%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="counselor-layout">
                         <div class="queue-section">
                             <h3>Daily Review Queue (T_low - T_high)</h3>
@@ -171,6 +280,10 @@
                                     <p>Pilih klip dari antrean untuk memutar</p>
                                 </div>
                             </div>
+                            <div class="counselor-notes-wrapper" style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+                                <label for="counselor-review-notes" style="font-size: 0.78rem; color: var(--text-secondary); font-weight: 600;">Catatan & Tindakan Evaluasi BK:</label>
+                                <textarea id="counselor-review-notes" placeholder="Tulis catatan penanganan di sini (misal: 'Siswa dimediasi di ruang BK'). Catatan ini akan otomatis masuk ke log kepala sekolah..." style="background: rgba(8, 10, 17, 0.4); border: 1px solid var(--glass-border); border-radius: 10px; padding: 10px; color: var(--text-primary); font-size: 0.8rem; font-family: inherit; resize: none; height: 75px; outline: none; transition: border-color 0.3s;"></textarea>
+                            </div>
                             <div class="playback-actions">
                                 <button class="btn-outline">Tandai False Alarm</button>
                                 <button class="btn-danger">Eskalasi Insiden</button>
@@ -183,27 +296,45 @@
                 <div id="view-principal" class="view hidden">
                     <div class="stats-cards">
                         <div class="stat-card">
-                            <div class="stat-icon"><i class="fa-solid fa-globe"></i></div>
+                            <div class="stat-progress">
+                                <svg class="progress-ring" width="70" height="70">
+                                    <circle class="progress-ring-bg" cx="35" cy="35" r="28" />
+                                    <circle class="progress-ring-fg stroke-cyan" cx="35" cy="35" r="28" style="stroke-dasharray: 175.9; stroke-dashoffset: 26.4;" /> <!-- 85% -->
+                                </svg>
+                                <div class="progress-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                            </div>
                             <div class="stat-info">
                                 <h4>SDG 4 Compliance</h4>
-                                <div class="stat-value text-green">+15%</div>
-                                <span class="stat-desc">Lingkungan Belajar Aman (vs Bulan Lalu)</span>
+                                <div class="stat-value text-cyan">85%</div>
+                                <span class="stat-desc">Lingkungan Belajar Aman (+15% vs Bln Lalu)</span>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon warning"><i class="fa-solid fa-hand"></i></div>
+                            <div class="stat-progress">
+                                <svg class="progress-ring" width="70" height="70">
+                                    <circle class="progress-ring-bg" cx="35" cy="35" r="28" />
+                                    <circle class="progress-ring-fg stroke-orange" cx="35" cy="35" r="28" style="stroke-dasharray: 175.9; stroke-dashoffset: 70.36;" /> <!-- 60% -->
+                                </svg>
+                                <div class="progress-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            </div>
                             <div class="stat-info">
                                 <h4>Total Insiden (Bulan ini)</h4>
-                                <div class="stat-value">12</div>
+                                <div class="stat-value text-orange">12</div>
                                 <span class="stat-desc">-3 dari bulan lalu</span>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon info"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                            <div class="stat-progress">
+                                <svg class="progress-ring" width="70" height="70">
+                                    <circle class="progress-ring-bg" cx="35" cy="35" r="28" />
+                                    <circle class="progress-ring-fg stroke-green" cx="35" cy="35" r="28" style="stroke-dasharray: 175.9; stroke-dashoffset: 47.49;" /> <!-- 73% -->
+                                </svg>
+                                <div class="progress-icon"><i class="fa-regular fa-clock"></i></div>
+                            </div>
                             <div class="stat-info">
-                                <h4>Rata-rata Respon Satpam</h4>
-                                <div class="stat-value">22 Detik</div>
-                                <span class="stat-desc">Target: < 30 Detik</span>
+                                <h4>Respon Satpam</h4>
+                                <div class="stat-value text-green">22s</div>
+                                <span class="stat-desc">Target: &lt; 30 Detik</span>
                             </div>
                         </div>
                     </div>
@@ -211,20 +342,158 @@
                     <div class="charts-layout">
                         <div class="chart-container">
                             <h3>Temporal Trend (Jam Rawan)</h3>
-                            <canvas id="trendChart"></canvas>
+                            <div class="chart-wrapper">
+                                <canvas id="trendChart"></canvas>
+                            </div>
                         </div>
                         <div class="chart-container">
-                            <h3>Spatial Heatmap (Titik Rawan)</h3>
-                            <div class="heatmap-mock">
-                                <div class="heatmap-map">
-                                    <div class="hotspot" style="top: 30%; left: 40%; background: rgba(255,0,0,0.7); box-shadow: 0 0 20px 10px rgba(255,0,0,0.5);"></div> <!-- Kantin -->
-                                    <div class="hotspot" style="top: 70%; left: 80%; background: rgba(255,165,0,0.6); box-shadow: 0 0 15px 5px rgba(255,165,0,0.4);"></div> <!-- Belakang -->
+                            <h3>Distribusi Jenis Pelanggaran</h3>
+                            <div class="chart-wrapper">
+                                <canvas id="violationPieChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Row 2: Hotspots & Safety Recommendations -->
+                    <div class="insights-grid" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; margin-top: 20px;">
+                        <!-- Left Panel: Area Vulnerability (Hotspots) -->
+                        <div class="chart-container" style="height: auto; min-height: 250px;">
+                            <h3>Peta Kerawanan Lokasi (Hotspots)</h3>
+                            <div class="hotspots-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
+                                <div class="hotspot-item">
+                                    <div style="display: flex; align-items: center; gap: 14px;">
+                                        <div class="hotspot-icon-box red">
+                                            <i class="fa-solid fa-basketball" style="color: var(--color-red); font-size: 0.95rem; text-shadow: var(--glow-red);"></i>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">Lapangan Olahraga</span>
+                                            <span style="font-size: 0.72rem; color: var(--text-secondary);">Lokasi Utama Konflik</span>
+                                        </div>
+                                    </div>
+                                    <div class="hotspot-bar-wrapper">
+                                        <div class="hotspot-bar-bg">
+                                            <div class="hotspot-bar-fill red"></div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 14px; text-align: right; flex-shrink: 0;">
+                                        <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">5 Insiden</span>
+                                        <span class="status-pill red">Tinggi</span>
+                                    </div>
                                 </div>
-                                <div class="heatmap-legend">
-                                    <span><span class="dot red"></span> Kantin (Tinggi)</span>
-                                    <span><span class="dot orange"></span> Belakang (Sedang)</span>
+                                <div class="hotspot-item">
+                                    <div style="display: flex; align-items: center; gap: 14px;">
+                                        <div class="hotspot-icon-box orange">
+                                            <i class="fa-solid fa-mug-hot" style="color: var(--color-orange); font-size: 0.95rem; text-shadow: var(--glow-orange);"></i>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">Kantin Sekolah</span>
+                                            <span style="font-size: 0.72rem; color: var(--text-secondary);">Fokus Jam Istirahat</span>
+                                        </div>
+                                    </div>
+                                    <div class="hotspot-bar-wrapper">
+                                        <div class="hotspot-bar-bg">
+                                            <div class="hotspot-bar-fill orange"></div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 14px; text-align: right; flex-shrink: 0;">
+                                        <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">3 Insiden</span>
+                                        <span class="status-pill yellow">Sedang</span>
+                                    </div>
+                                </div>
+                                <div class="hotspot-item">
+                                    <div style="display: flex; align-items: center; gap: 14px;">
+                                        <div class="hotspot-icon-box green">
+                                            <i class="fa-solid fa-door-closed" style="color: var(--color-green); font-size: 0.95rem; text-shadow: var(--glow-green);"></i>
+                                        </div>
+                                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">Koridor Kelas B</span>
+                                            <span style="font-size: 0.72rem; color: var(--text-secondary);">Area Aman Terkendali</span>
+                                        </div>
+                                    </div>
+                                    <div class="hotspot-bar-wrapper">
+                                        <div class="hotspot-bar-bg">
+                                            <div class="hotspot-bar-fill green"></div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 14px; text-align: right; flex-shrink: 0;">
+                                        <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">2 Insiden</span>
+                                        <span class="status-pill green">Rendah</span>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+                        
+                        <!-- Right Panel: Safety Recommendations & Compliance Insights -->
+                        <div class="chart-container" style="height: auto; min-height: 250px;">
+                            <h3>Rekomendasi Evaluasi Keamanan (Weekly Safety Insights)</h3>
+                            <div class="recommendations-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
+                                <div class="recommendation-card blue">
+                                    <div class="recommendation-icon-box blue">
+                                        <i class="fa-solid fa-lightbulb" style="color: #3b82f6; font-size: 1.2rem; text-shadow: 0 0 8px rgba(59, 130, 246, 0.4);"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="recommendation-title">Tingkatkan Patroli di Lapangan</h4>
+                                        <p style="margin: 0; font-size: 0.78rem; color: var(--text-secondary);">Disarankan menambah kehadiran satpam di area Lapangan Olahraga pada jam istirahat kedua (12:00 - 12:30 WIB) karena frekuensi kerumunan tinggi.</p>
+                                    </div>
+                                </div>
+                                <div class="recommendation-card purple">
+                                    <div class="recommendation-icon-box purple">
+                                        <i class="fa-solid fa-user-group" style="color: #8b5cf6; font-size: 1.15rem; text-shadow: 0 0 8px rgba(139, 92, 246, 0.4);"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="recommendation-title">Kampanye Anti-Perundungan</h4>
+                                        <p style="margin: 0; font-size: 0.78rem; color: var(--text-secondary);">Bimbingan Konseling (BK) disarankan memperkuat sosialisasi anti-perundungan untuk siswa di Gedung Kelas B berdasar peningkatan deteksi anomali.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Log Tindakan Terkini -->
+                    <div class="action-logs-section">
+                        <h3>Log Tindakan Terkini</h3>
+                        <div class="action-logs-table-wrapper">
+                            <table class="action-logs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Waktu</th>
+                                        <th>Lokasi</th>
+                                        <th>Deteksi Awal</th>
+                                        <th>Tindakan Satpam</th>
+                                        <th>Status Tinjauan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="principal-action-logs">
+                                    <tr>
+                                        <td>14:34:14</td>
+                                        <td>Kamera 2</td>
+                                        <td><span class="badge yellow">Mencurigakan (0.33)</span></td>
+                                        <td>Patroli Area</td>
+                                        <td><span class="status-pill yellow">Menunggu Review</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>14:33:50</td>
+                                        <td>Kamera 1</td>
+                                        <td><span class="badge yellow">Mencurigakan (0.28)</span></td>
+                                        <td>Pengecekan Layar</td>
+                                        <td><span class="status-pill yellow">Menunggu Review</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>10:30:10</td>
+                                        <td>Kamera 2</td>
+                                        <td><span class="badge red">Kritis (0.72)</span></td>
+                                        <td>Respon cepat (24 Detik)</td>
+                                        <td><span class="status-pill red">Eskalasi Kasus</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>08:15:22</td>
+                                        <td>Kamera 1</td>
+                                        <td><span class="badge red">Kritis (0.65)</span></td>
+                                        <td>Direspon Satpam</td>
+                                        <td><span class="status-pill green">Selesai (Aman)</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -234,7 +503,81 @@
     
     <!-- Audio element for critical alerts -->
     <audio id="alert-sound" src="https://www.soundjay.com/buttons/sounds/beep-01a.mp3" preload="auto"></audio>
+
+    <!-- Rename Camera Modal -->
+    <div id="rename-modal" class="modal-overlay hidden">
+        <div class="rename-modal-card">
+            <div class="rename-modal-header">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <i class="fa-solid fa-pen" style="color:var(--color-blue);"></i>
+                    <h3>Ganti Nama Kamera</h3>
+                </div>
+                <button class="btn-close-drill" id="btn-close-rename"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="rename-modal-body">
+                <label style="font-size:0.8rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px;">Nama Lokasi / Kamera</label>
+                <input type="text" id="rename-input" placeholder="cth: Ruang Guru, Gerbang Depan..." maxlength="40"
+                    style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#f1f5f9;font-size:0.95rem;font-family:inherit;outline:none;">
+                <div style="display:flex;gap:10px;margin-top:14px;">
+                    <button id="btn-rename-confirm" style="flex:1;padding:11px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);border:none;border-radius:10px;color:#fff;font-weight:600;font-family:inherit;cursor:pointer;font-size:0.9rem;">Simpan</button>
+                    <button id="btn-rename-cancel" style="flex:1;padding:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#94a3b8;font-weight:600;font-family:inherit;cursor:pointer;font-size:0.9rem;">Batal</button>
+                </div>
+            </div>
+        </div>
+    </div>
     
-    <script src="app.js"></script>
+    <!-- Drill Down Modal -->
+    <div id="drill-down-modal" class="modal-overlay hidden">
+        <div class="drill-down-card">
+            <div class="drill-header">
+                <div class="drill-header-left">
+                    <i class="fa-solid fa-chart-line" id="drill-header-icon" style="color: var(--color-blue); font-size: 1.25rem;"></i>
+                    <h3 id="drill-modal-title">Detail Laporan Analisis</h3>
+                </div>
+                <button class="btn-close-drill" id="btn-close-drill"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="drill-content">
+                <!-- Stat widgets row inside drilldown -->
+                <div class="drill-stats-grid">
+                    <div class="drill-stat-box">
+                        <span class="drill-stat-label">Total Kejadian</span>
+                        <strong class="drill-stat-value" id="drill-total-val">0</strong>
+                    </div>
+                    <div class="drill-stat-box">
+                        <span class="drill-stat-label">Tingkat Bahaya</span>
+                        <span id="drill-danger-badge" class="drill-item-badge badge yellow">Sedang</span>
+                    </div>
+                    <div class="drill-stat-box">
+                        <span class="drill-stat-label">Lokasi Utama</span>
+                        <strong class="drill-stat-value" id="drill-location-val" style="font-size: 0.85rem;">Lapangan Olahraga</strong>
+                    </div>
+                </div>
+                
+                <!-- Floating Video Player Preview inside Drill Down -->
+                <div class="drill-video-preview" id="drill-video-preview" style="display: none; flex-direction: column; gap: 8px;">
+                    <h4 class="drill-section-title"><i class="fa-solid fa-circle-play"></i> Cuplikan Deteksi Sistem</h4>
+                    <div style="position: relative; width: 100%; height: 200px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); background: #07090e;">
+                        <video id="drill-player" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;">
+                            <source src="" type="video/mp4">
+                        </video>
+                        <div style="position: absolute; top: 12px; left: 12px; background: rgba(15,23,42,0.85); padding: 4px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 700; color: #fff; border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <span class="live-dot" style="background: var(--color-red); box-shadow: 0 0 6px var(--color-red);"></span>
+                            <span id="drill-video-cam-name">Kamera</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Breakdown Lists -->
+                <div class="drill-list-section">
+                    <h4 class="drill-section-title"><i class="fa-solid fa-list-check"></i> Distribusi Kasus Terperinci</h4>
+                    <div class="drill-items-container" id="drill-items-container">
+                        <!-- Dynamic rows injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js?v=1.1"></script>
 </body>
 </html>
