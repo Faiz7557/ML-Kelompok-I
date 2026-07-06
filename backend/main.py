@@ -22,8 +22,7 @@ from pydantic import BaseModel
 FRAMES_PER_WINDOW = 16        # Temporal window size (unchanged – matches training)
 WINDOW_STEP       = 4         # Overlap step: slide 4 frames (was 8 → less latency)
 TARGET_H, TARGET_W = 224, 224
-INFERENCE_EVERY_N  = 2        # Process only 1 in N frames for feature extraction
-                               # (reduces CPU load by ~50% with minimal accuracy loss)
+INFERENCE_EVERY_N  = 1        # Process every frame to maintain correct temporal spacing
 
 # Use more threads now that inference is off the event loop
 torch.set_num_threads(4)
@@ -166,7 +165,8 @@ async def _run_in_executor(fn, *args):
 
 class InferencePipeline:
     """
-    Manages per-camera temporal feature buffer and sliding-window inference.
+    Manages per-camera temporal feature buffer, motion dynamics,
+    and sliding-window hybrid inference (CNN-LSTM + Motion Heuristics).
 
     Usage:
         pipeline = InferencePipeline(cam_id="cam-1", cam_name="Lobby")
@@ -180,6 +180,8 @@ class InferencePipeline:
         self._feat_buf: list[torch.Tensor] = []
         self._raw_buf:  list[str]          = []
         self._frame_counter = 0            # for INFERENCE_EVERY_N throttle
+        self._gray_history = []            # Store history of gray frames for motion calculation
+        self._motion_history = []          # Store rolling history of motion energy
 
     def update_name(self, cam_name: str):
         self.cam_name = cam_name
@@ -208,6 +210,33 @@ class InferencePipeline:
         if frame is None:
             return None
 
+        # Calculate motion energy robust to network bursts (compare with frame from 2 steps ago)
+        motion_score = 0.0
+        try:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            gray = cv2.resize(gray, (100, 100))
+            if len(self._gray_history) >= 2:
+                # Compare current frame with the frame from 2 steps ago (compensates for jitter)
+                diff = cv2.absdiff(gray, self._gray_history[0])
+                motion_score = float(np.mean(diff))
+            
+            self._gray_history.append(gray)
+            if len(self._gray_history) > 3:
+                self._gray_history.pop(0)
+        except Exception:
+            pass
+
+        self._motion_history.append(motion_score)
+        if len(self._motion_history) > 16:
+            self._motion_history.pop(0)
+
+        # Compute average motion in the last 8 frames
+        avg_motion = sum(self._motion_history[-8:]) / len(self._motion_history[-8:]) if self._motion_history else 0.0
+
+        # Sigmoid-like scaling for motion score: center around 3.8, slope 1.1
+        motion_prob = 1.0 / (1.0 + np.exp(-(avg_motion - 3.8) / 1.1))
+        motion_prob = max(0.05, min(0.98, motion_prob))
+
         # 2. Pre-process in thread pool
         processed = await _run_in_executor(_preprocess_frame, frame)
 
@@ -218,7 +247,11 @@ class InferencePipeline:
         # 4. Classify once window is full
         if len(self._feat_buf) >= FRAMES_PER_WINDOW:
             features_seq = torch.stack(self._feat_buf[:FRAMES_PER_WINDOW], dim=1).to(device)
-            prob = await _run_in_executor(_classify_sync, features_seq)
+            model_prob = await _run_in_executor(_classify_sync, features_seq)
+
+            # Combine model output with motion dynamics heuristic
+            # This makes the classification react accurately to physical movement
+            prob = 0.25 * model_prob + 0.75 * motion_prob
 
             clip_data = list(self._raw_buf[-FRAMES_PER_WINDOW:]) if prob >= 0.5 else []
 
@@ -229,6 +262,8 @@ class InferencePipeline:
                 "box":      {"w": 0, "h": 0, "x": 0, "y": 0},
                 "clip":     clip_data,
             }
+
+            print(f"[AI] {self.cam_id} ({self.cam_name}) prediction probability: {prob:.4f} (Model: {model_prob:.4f}, Motion: {motion_prob:.4f}, AvgMotion: {avg_motion:.2f})")
 
             # Slide the window
             self._feat_buf = self._feat_buf[WINDOW_STEP:]
@@ -247,6 +282,7 @@ active_nodes: dict = {}
 
 
 async def broadcast_to_dashboards(payload: dict):
+    global dashboard_sockets
     text = json.dumps(payload)
     dead = set()
     for ws in list(dashboard_sockets):
@@ -365,6 +401,7 @@ async def websocket_dashboard(websocket: WebSocket):
             payload = json.loads(data)
 
             if payload.get("type") == "frame" and payload.get("cam_id") == "cam-1":
+                print(f"[WS] Received webcam frame from dashboard, size: {len(payload.get('image', ''))}")
                 result = await pipeline.process(payload["image"])
                 if result:
                     await websocket.send_text(json.dumps(result))
@@ -439,6 +476,7 @@ async def websocket_node(websocket: WebSocket, cam_id: str):
 
             if payload.get("type") == "frame":
                 image_data = payload.get("image", "")
+                print(f"[WS] Received frame from {cam_id}, size: {len(image_data)}")
 
                 # 1. Broadcast live preview to all dashboards immediately
                 await broadcast_to_dashboards({

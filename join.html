@@ -398,11 +398,10 @@
 
     <script>
         // --- Config ---
-        // 5 fps is optimal for the MobileNetV2+LSTM pipeline:
-        // - Server extracts features every 2nd frame (INFERENCE_EVERY_N=2)
-        // - 16-frame window is filled in ~6.4s at 5fps
-        // - Leaves headroom for multiple simultaneous nodes
-        const FRAME_INTERVAL_MS = 200; // 5 fps
+        // 10 fps is optimal for the temporal speed of the LSTM:
+        // - Server extracts features every frame to keep original sequence speed
+        // - 16-frame window is filled in ~1.6s
+        const FRAME_INTERVAL_MS = 100; // 10 fps
         const MAX_BUFFER_BYTES  = 65536; // 64 KB — skip frame if WS is congested
 
         // --- State ---

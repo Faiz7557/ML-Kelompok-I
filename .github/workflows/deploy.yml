@@ -25,8 +25,7 @@ jobs:
           git config --global user.name "GitHub Action"
           
           # Tambahkan Hugging Face Space sebagai remote git menggunakan token autentikasi
-          # Ganti USERNAME dan SPACE_NAME di bawah ini sesuai dengan akun Anda!
-          git remote add hf https://Faiz7557:$HF_TOKEN@huggingface.co/spaces/Faiz7557/safeschool-ai
+          git remote add hf https://Arsene75:$HF_TOKEN@huggingface.co/spaces/Arsene75/safeschool-ai
           
           # Force push ke Hugging Face branch main
           git push --force hf main

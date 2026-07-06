@@ -211,9 +211,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initialize with 4 cameras after variables are loaded
-    setCameraCount(4);
-
     // 3. Variables & Alerts System
     const alertList = document.getElementById('live-alerts');
     const alertCount = document.getElementById('alert-count');
@@ -223,8 +220,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const alertSound = document.getElementById('alert-sound');
 
     let currentAlerts = 0;
-    const T_LOW = 0.5;
-    const T_HIGH = 0.8;
+    const T_LOW = 0.4;
+    const T_HIGH = 0.65;
 
     function addAlert(message, type, location) {
         const emptyState = alertList.querySelector('.empty-state');
@@ -295,7 +292,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="ai-overlay hidden">
                     <div class="bounding-box"></div>
-                    <div class="ai-prob">Prob: <span class="score">0.0</span></div>
+                    <div class="ai-prob">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>AMAN</span>
+                        <span class="score">0%</span>
+                    </div>
                 </div>
                 <div class="feed-connection-state" id="${camId}-waiting">
                     <div class="spinner-ring"></div>
@@ -411,11 +412,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const overlay = feedEl.querySelector('.ai-overlay');
-        const scoreEl = feedEl.querySelector('.score');
         const aiProb = feedEl.querySelector('.ai-prob');
         const boxEl = feedEl.querySelector('.bounding-box');
         
-        scoreEl.textContent = prob.toFixed(2);
+        const percentage = Math.round(prob * 100);
         
         // Map camera id to clean simple name
         const camNumberMap = {
@@ -442,8 +442,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (prob >= T_HIGH) {
             // Kritis (Red)
             overlay.classList.remove('hidden');
-            aiProb.style.background = 'rgba(239, 68, 68, 0.8)';
-            aiProb.style.borderColor = 'var(--color-red)';
+            if (aiProb) {
+                aiProb.style.background = 'rgba(239, 68, 68, 0.85)';
+                aiProb.style.borderColor = 'var(--color-red)';
+                aiProb.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>KEKERASAN</span> <span class="score">${percentage}%</span>`;
+            }
             if (boxEl) {
                 boxEl.style.borderColor = 'var(--color-red)';
                 boxEl.style.boxShadow = 'var(--glow-red)';
@@ -466,8 +469,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (prob >= T_LOW) {
             // Review (Yellow)
             overlay.classList.remove('hidden');
-            aiProb.style.background = 'rgba(249, 115, 22, 0.8)';
-            aiProb.style.borderColor = 'var(--color-orange)';
+            if (aiProb) {
+                aiProb.style.background = 'rgba(249, 115, 22, 0.85)';
+                aiProb.style.borderColor = 'var(--color-orange)';
+                aiProb.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>MENCURIGAKAN</span> <span class="score">${percentage}%</span>`;
+            }
             if (boxEl) {
                 boxEl.style.borderColor = 'var(--color-orange)';
                 boxEl.style.boxShadow = 'var(--glow-orange)';
@@ -487,8 +493,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // Normal (Green)
             overlay.classList.remove('hidden');
-            aiProb.style.background = 'rgba(16, 185, 129, 0.8)';
-            aiProb.style.borderColor = 'var(--color-green)';
+            if (aiProb) {
+                aiProb.style.background = 'rgba(16, 185, 129, 0.85)';
+                aiProb.style.borderColor = 'var(--color-green)';
+                aiProb.innerHTML = `<i class="fa-solid fa-shield-halved"></i> <span>AMAN</span> <span class="score">${percentage}%</span>`;
+            }
             if (boxEl) {
                 boxEl.style.borderColor = 'var(--color-green)';
                 boxEl.style.boxShadow = 'var(--glow-green)';
@@ -566,8 +575,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     }
 
-    // 5 fps — matches server's INFERENCE_EVERY_N=2 pipeline (effective 2.5 inferences/sec)
-    setInterval(sendWebcamFrame, 200);
+    // 10 fps — matches server's 10fps sequence capture for optimal LSTM speed
+    setInterval(sendWebcamFrame, 100);
 
     // Start connection
     connectWebSocket();
