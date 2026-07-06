@@ -548,24 +548,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function sendWebcamFrame() {
         if (!isConnected || !webcamStreamActive || !ws) return;
-        // Hanya kirim jika WebSocket siap (readyState === 1)
-        if (ws.readyState !== 1) return;
-        
-        const ctx = webcamCanvas.getContext('2d');
+        if (ws.readyState !== WebSocket.OPEN) return;
+
+        // Adaptive backpressure: skip frame if send queue is congested
+        if (ws.bufferedAmount > 65536) return;
+
+        const ctx = webcamCanvas.getContext('2d', { willReadFrequently: true });
         ctx.drawImage(webcamVideo, 0, 0, webcamCanvas.width, webcamCanvas.height);
-        
-        // Ekstrak sebagai Base64 JPEG dengan kualitas 70% (agar ringan di websocket)
-        const dataUrl = webcamCanvas.toDataURL('image/jpeg', 0.7);
-        
+
+        // JPEG quality 0.60 — lighter payload, server resizes to 224x224 anyway
+        const dataUrl = webcamCanvas.toDataURL('image/jpeg', 0.60);
+
         ws.send(JSON.stringify({
             type: "frame",
             cam_id: "cam-1",
             image: dataUrl
         }));
     }
-    
-    // Kirim 10 frames per second ke backend (100ms interval untuk efisiensi CPU & jaringan)
-    setInterval(sendWebcamFrame, 100);
+
+    // 5 fps — matches server's INFERENCE_EVERY_N=2 pipeline (effective 2.5 inferences/sec)
+    setInterval(sendWebcamFrame, 200);
 
     // Start connection
     connectWebSocket();
